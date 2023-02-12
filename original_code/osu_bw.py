@@ -1,8 +1,6 @@
 # http://mvapich.cse.ohio-state.edu/benchmarks/
 
-import mpi4py
 from mpi4py import MPI
-import os
 
 def osu_bw(
     BENCHMARH = "MPI Bandwidth Test",
@@ -12,21 +10,14 @@ def osu_bw(
     skip_large = 2,
     loop_large = 20,
     window_size_large = 64,
-    large_message_size = 2**22,
-    MAX_MSG_SIZE = 1<<32,
+    large_message_size = 8192,
+    MAX_MSG_SIZE = 1<<27,
     ):
 
     comm = MPI.COMM_WORLD
     myid = comm.Get_rank()
     numprocs = comm.Get_size()
-    name = MPI.Get_processor_name()
-    print(numprocs, myid, name, flush=True)
-    print(os.environ['HOSTNAME'], flush=True)
-
-    if myid == 0: 
-        print(MPI.Get_version(), flush=True)
-        print(mpi4py.get_config(), flush=True)
-        print(numprocs, flush=True)
+    print(numprocs)
 
     if numprocs != 2:
         if myid == 0:
@@ -43,7 +34,8 @@ def osu_bw(
     if myid == 0:
         print ('# %-8s%20s' % ("Size [B]", "Bandwidth [MB/s]"))
 
-    message_sizes = [2**i for i in range(32)]
+    #message_sizes = [2**i for i in range(30)]
+    message_sizes = [2**i for i in range(15)]
     for size in message_sizes:
         if size > MAX_MSG_SIZE:
             break
@@ -80,7 +72,7 @@ def osu_bw(
         if myid == 0:
             MB = size / 1e6 * loop * window_size
             s = t_end - t_start
-            print ('%-10d%20.2f' % (size, MB/s), flush=True)
+            print ('%-10d%20.2f' % (size, MB/s))
 
 
 def allocate(n):

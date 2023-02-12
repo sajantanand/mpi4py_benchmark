@@ -2,7 +2,6 @@
 
 import mpi4py
 from mpi4py import MPI
-import os
 
 def osu_bw(
     BENCHMARH = "MPI Bandwidth Test",
@@ -19,9 +18,6 @@ def osu_bw(
     comm = MPI.COMM_WORLD
     myid = comm.Get_rank()
     numprocs = comm.Get_size()
-    name = MPI.Get_processor_name()
-    print(numprocs, myid, name, flush=True)
-    print(os.environ['HOSTNAME'], flush=True)
 
     if myid == 0: 
         print(MPI.Get_version(), flush=True)
@@ -58,24 +54,26 @@ def osu_bw(
         #
         comm.Barrier()
         if myid == 0:
-            s_msg = [s_buf, size, MPI.BYTE]
-            r_msg = [r_buf,    4, MPI.BYTE]
+            #s_msg = [s_buf, size, MPI.BYTE]
+            #r_msg = [r_buf,    4, MPI.BYTE]
+            s_msg = allocate(size)
             for i in iterations:
                 if i == skip:
                     t_start = MPI.Wtime()
                 for j in window_sizes:
-                    requests[j] = comm.Isend(s_msg, 1, 100)
+                    requests[j] = comm.isend(s_msg, dest=1, tag=100)
                 MPI.Request.Waitall(requests)
-                comm.Recv(r_msg, 1, 101)
+                comm.recv(source=1, tag=101)
             t_end = MPI.Wtime()
         elif myid == 1:
-            s_msg = [s_buf,    4, MPI.BYTE]
+            #s_msg = [s_buf,    4, MPI.BYTE]
             r_msg = [r_buf, size, MPI.BYTE]
+            s_msg = allocate(4)
             for i in iterations:
                 for j in window_sizes:
-                    requests[j] = comm.Irecv(r_msg, 0, 100)
+                    requests[j] = comm.irecv(r_buf, source=0, tag=100)
                 MPI.Request.Waitall(requests)
-                comm.Send(s_msg, 0, 101)
+                comm.send(s_msg, dest=0, tag=101)
         #
         if myid == 0:
             MB = size / 1e6 * loop * window_size
@@ -84,6 +82,9 @@ def osu_bw(
 
 
 def allocate(n):
+    from numpy import zeros
+    return zeros(n, 'B')
+    
     try:
         import mmap
         return mmap.mmap(-1, n)
